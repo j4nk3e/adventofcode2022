@@ -12,20 +12,15 @@ defmodule AdventOfCode.Day01 do
     end
   end
 
+  defp replace_min([], _), do: []
+  defp replace_min([h | t], min) when h > min, do: [h | replace_min(t, min)]
+  defp replace_min([h | t], min), do: [min | replace_min(t, h)]
+
   def part2(args) do
-    for i <- parse(args), reduce: [] do
-      acc ->
-        cond do
-          Enum.count(acc) < 3 ->
-            [i | acc]
+    p = parse(args)
 
-          Enum.all?(acc, fn e -> e > i end) ->
-            acc
-
-          true ->
-            a = Enum.sort(acc) |> Enum.drop(1)
-            [i | a]
-        end
+    for i <- Enum.drop(p, 3), reduce: Enum.take(p, 3) do
+      acc -> replace_min(acc, i)
     end
     |> Enum.sum()
   end

@@ -2,12 +2,7 @@ defmodule AdventOfCode.Day02 do
   def part1(args) do
     parse(args)
     |> Enum.map(fn [other, me] ->
-      me + 1 +
-        case rem(me - other + 3, 3) do
-          0 -> 3
-          1 -> 6
-          2 -> 0
-        end
+      me + 1 + rem(me - other + 4, 3) * 3
     end)
     |> Enum.sum()
   end
@@ -30,7 +25,7 @@ defmodule AdventOfCode.Day02 do
   def part2(args) do
     parse(args)
     |> Enum.map(fn [other, me] ->
-      rem(other + me - 1 + 3, 3) + 1 + me * 3
+      rem(other + me + 2, 3) + 1 + me * 3
     end)
     |> Enum.sum()
   end

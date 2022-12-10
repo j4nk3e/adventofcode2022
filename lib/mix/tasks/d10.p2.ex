@@ -12,6 +12,6 @@ defmodule Mix.Tasks.D10.P2 do
       else:
         input
         |> part2()
-        |> IO.inspect(label: "Part 2 Results")
+        |> IO.puts()
   end
 end

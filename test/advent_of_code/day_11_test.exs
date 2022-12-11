@@ -33,6 +33,11 @@ defmodule AdventOfCode.Day11Test do
       If false: throw to monkey 1
   "
 
+  setup_all do
+    start()
+    :ok
+  end
+
   test "part1" do
     result = part1(@input)
 

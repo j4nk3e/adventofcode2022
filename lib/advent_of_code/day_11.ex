@@ -1,20 +1,21 @@
 defmodule Monkee do
   use GenServer
+  defstruct id: nil, items: [], op: nil, prime: nil, throw: nil, reduce: nil, busy: 0
 
-  def start_link({id, start, op, test, div}) do
+  def start_link(monkee) do
     {:ok, pid} =
-      GenServer.start_link(__MODULE__, {start, op, test, div}, name: {:global, "m_#{id}"})
+      GenServer.start_link(__MODULE__, monkee,
+        name: {:via, Registry, {AdventOfCode.Day11, monkee.id}}
+      )
 
     pid
   end
 
   @impl true
-  def init({items, op, test, div}) do
-    state = {items, [], op, test, div, 0}
-    {:ok, state}
+  def init(monkee) do
+    {:ok, {monkee, []}}
   end
 
-  @spec inspect(atom | pid | {atom, any} | {:via, atom, any}) :: any
   def inspect(pid) do
     GenServer.call(pid, :inspect)
   end
@@ -24,50 +25,65 @@ defmodule Monkee do
   end
 
   @impl true
-  def handle_call(:inspect, _from, {items, inbox, op, test, div, busy}) do
-    for i <- items ++ Enum.reverse(inbox) do
-      i = op.(i)
-      i = div.(i)
-      next = test.(i)
-      GenServer.call({:global, "m_#{next}"}, {:catch, i})
+  def handle_call(:inspect, _from, {monkee, inbox}) do
+    for i <- monkee.items ++ Enum.reverse(inbox) do
+      i = i |> monkee.op.() |> monkee.reduce.()
+      {a, b} = monkee.throw
+
+      next =
+        case rem(i, monkee.prime) do
+          0 -> a
+          _ -> b
+        end
+
+      GenServer.call({:via, Registry, {AdventOfCode.Day11, next}}, {:catch, i})
     end
 
-    {:reply, :ok, {[], [], op, test, div, busy + Enum.count(items) + Enum.count(inbox)}}
+    {:reply, :ok,
+     {%Monkee{
+        monkee
+        | busy: monkee.busy + Enum.count(monkee.items) + Enum.count(inbox),
+          items: []
+      }, []}}
   end
 
   @impl true
-  def handle_call({:catch, item}, _from, {items, inbox, op, test, div, busy}) do
-    state = {items, [item | inbox], op, test, div, busy}
-    {:reply, :ok, state}
+  def handle_call({:catch, item}, _from, {monkee, inbox}) do
+    {:reply, :ok, {monkee, [item | inbox]}}
   end
 
   @impl true
-  def handle_call(:busy, _from, {_, _, _, _, _, busy} = state) do
-    {:reply, busy, state}
+  def handle_call(:busy, _from, {monkee, _} = state) do
+    {:stop, :normal, monkee.busy, state}
   end
 end
 
 defmodule AdventOfCode.Day11 do
-  def part1(args) do
-    monkees = parse(args)
+  def start() do
+    Supervisor.start_link([{Registry, keys: :unique, name: __MODULE__}], strategy: :one_for_one)
+  end
 
-    play(monkees, 20, &div(&1, 3))
+  def part1(args) do
+    parse(args)
+    |> play(20)
   end
 
   def part2(args) do
     monkees = parse(args)
 
-    div =
-      Enum.map(monkees, fn m -> elem(m, 4) end)
+    product =
+      Enum.map(monkees, fn m -> m.prime end)
       |> Enum.reduce(fn e, a -> e * a end)
 
-    play(monkees, 10000, &rem(&1, div))
+    monkees
+    |> Enum.map(fn m -> %Monkee{m | reduce: &rem(&1, product)} end)
+    |> play(10000)
   end
 
-  defp play(monkees, rounds, reduce) do
+  defp play(monkees, rounds) do
     m =
-      for {id, start, op, test, _} <- monkees do
-        Monkee.start_link({id, start, op, test, reduce})
+      for m <- monkees do
+        Monkee.start_link(m)
       end
 
     for _ <- 1..rounds do
@@ -93,16 +109,28 @@ defmodule AdventOfCode.Day11 do
     |> Enum.map(&monkee/1)
   end
 
+  defp numbers(s) do
+    Regex.scan(~r"(\d+)", s, capture: :all_but_first)
+    |> Enum.flat_map(& &1)
+    |> Enum.map(fn e -> Integer.parse(e) |> elem(0) end)
+  end
+
+  defp old_or(i) do
+    if i == "old" do
+      & &1
+    else
+      n = Integer.parse(i) |> elem(0)
+      fn _ -> n end
+    end
+  end
+
   defp monkee(s) do
-    [id, start, op, test, if_true, if_false] = String.split(s, "\n")
-
-    id = Regex.run(~r"(\d+)", id, capture: :all_but_first) |> hd |> Integer.parse() |> elem(0)
-
-    start =
-      Regex.scan(~r"(\d+)", start, capture: :all_but_first)
-      |> Enum.map(fn e -> Integer.parse(hd(e)) |> elem(0) end)
-
+    [id, start, op, prime, if_true, if_false] = String.split(s, "\n")
+    start = numbers(start)
     [a, op, b] = Regex.run(~r"new = ([\d\w]+) ([\+\*]) ([\d\w]+)", op, capture: :all_but_first)
+
+    [id, prime, if_true, if_false] =
+      [id, prime, if_true, if_false] |> Enum.map(fn e -> numbers(e) |> hd end)
 
     op =
       case op do
@@ -110,41 +138,17 @@ defmodule AdventOfCode.Day11 do
         "+" -> &(&1 + &2)
       end
 
-    op = fn old ->
-      a =
-        if a == "old" do
-          old
-        else
-          Integer.parse(a) |> elem(0)
-        end
+    a = old_or(a)
+    b = old_or(b)
+    op = fn old -> op.(a.(old), b.(old)) end
 
-      b =
-        if b == "old" do
-          old
-        else
-          Integer.parse(b) |> elem(0)
-        end
-
-      op.(a, b)
-    end
-
-    prime =
-      Regex.run(~r"(\d+)", test, capture: :all_but_first) |> hd |> Integer.parse() |> elem(0)
-
-    if_true =
-      Regex.run(~r"(\d+)", if_true, capture: :all_but_first) |> hd |> Integer.parse() |> elem(0)
-
-    if_false =
-      Regex.run(~r"(\d+)", if_false, capture: :all_but_first) |> hd |> Integer.parse() |> elem(0)
-
-    test = fn i ->
-      if rem(i, prime) == 0 do
-        if_true
-      else
-        if_false
-      end
-    end
-
-    {id, start, op, test, prime}
+    %Monkee{
+      id: id,
+      items: start,
+      op: op,
+      prime: prime,
+      reduce: &div(&1, 3),
+      throw: {if_true, if_false}
+    }
   end
 end

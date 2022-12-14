@@ -4,19 +4,19 @@ defmodule AdventOfCode.Day14Test do
   import AdventOfCode.Day14
 
   @input "
+  498,4 -> 498,6 -> 496,6
+  503,4 -> 502,4 -> 502,9 -> 494,9
   "
 
   test "part1" do
     result = part1(@input)
 
-    assert result ==
+    assert result == 24
   end
 
-  @tag :skip
   test "part2" do
-    input = nil
-    result = part2(input)
+    result = part2(@input)
 
-    assert result
+    assert result == 93
   end
 end

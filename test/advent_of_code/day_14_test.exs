@@ -3,12 +3,13 @@ defmodule AdventOfCode.Day14Test do
 
   import AdventOfCode.Day14
 
-  @tag :skip
-  test "part1" do
-    input = nil
-    result = part1(input)
+  @input "
+  "
 
-    assert result
+  test "part1" do
+    result = part1(@input)
+
+    assert result ==
   end
 
   @tag :skip

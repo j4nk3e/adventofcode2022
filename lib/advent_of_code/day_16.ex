@@ -13,22 +13,24 @@ defmodule AdventOfCode.Day16 do
       end
       |> Map.new()
 
-    find(cand |> Map.delete(start), dist, start, 30, 0, 0)
+    find(cand |> Map.delete(start), dist, start, 30, 0, 0, MapSet.new())
+    |> Enum.map(&elem(&1, 0))
+    |> Enum.max()
   end
 
-  defp find(m, _, _, time, flow, press) when map_size(m) == 0, do: time * flow + press
+  defp find(m, _, _, time, flow, press, acc) when map_size(m) == 0,
+    do: [{time * flow + press, MapSet.new(acc)}]
 
-  defp find(next, dist, pos, time, flow, press) do
-    for {n, {f, _}} <- next do
-      d = dist[{pos, n}] + 1
-
-      if d > time do
-        find(%{}, dist, n, time, flow, press)
-      else
-        find(Map.delete(next, n), dist, n, time - d, flow + f, press + flow * d)
-      end
-    end
-    |> Enum.max()
+  defp find(next, dist, pos, time, flow, press, acc) do
+    [
+      {time * flow + press, MapSet.new(acc)}
+      | for {n, {f, _}} <- next, d = dist[{pos, n}] + 1, d <= time do
+          acc = MapSet.put(acc, n)
+          find(Map.delete(next, n), dist, n, time - d, flow + f, press + flow * d, acc)
+        end
+        |> Enum.flat_map(& &1)
+    ]
+    |> Enum.uniq()
   end
 
   defp dist(map, start, goal, n \\ 0) do
@@ -70,26 +72,23 @@ defmodule AdventOfCode.Day16 do
       end
       |> Map.new()
 
-    cand
-    |> Map.delete(start)
-    |> find2(dist, start, 26, 0, 0, 0)
-  end
+    results =
+      cand
+      |> Map.delete(start)
+      |> find(dist, start, 26, 0, 0, MapSet.new())
+      |> Enum.group_by(fn {_, k} -> k end, fn {v, _} -> v end)
+      |> Enum.map(fn {k, l} -> {k, Enum.max(l)} end)
 
-  defp find2(m, _, _, time, flow, press, _) when map_size(m) == 0,
-    do: time * flow + press
+    for {path, press} <- results do
+      res =
+        results
+        |> Enum.filter(fn {k, _} -> MapSet.disjoint?(path, k) end)
+        |> Enum.map(&elem(&1, 1))
 
-  defp find2(next, dist, pos, time, flow, press, i) do
-    for {n, {f, _}} <- next do
-      d = dist[{pos, n}] + 1
-
-      if d > time do
-        if i == 0 do
-          time * flow + press + find2(next, dist, "AA", 26, 0, 0, 1)
-        else
-          find2(%{}, dist, n, time, flow, press, i)
-        end
+      if [] == res do
+        press
       else
-        find2(Map.delete(next, n), dist, n, time - d, flow + f, press + flow * d, i)
+        press + Enum.max(res)
       end
     end
     |> Enum.max()

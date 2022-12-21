@@ -3,19 +3,33 @@ defmodule AdventOfCode.Day21Test do
 
   import AdventOfCode.Day21
 
-  @tag :skip
-  test "part1" do
-    input = nil
-    result = part1(input)
+  @input "
+  root: pppw + sjmn
+  dbpl: 5
+  cczh: sllz + lgvd
+  zczc: 2
+  ptdq: humn - dvpt
+  dvpt: 3
+  lfqf: 4
+  humn: 5
+  ljgn: 2
+  sjmn: drzm * dbpl
+  sllz: 4
+  pppw: cczh / lfqf
+  lgvd: ljgn * ptdq
+  drzm: hmdt - zczc
+  hmdt: 32
+"
 
-    assert result
+  test "part1" do
+    result = part1(@input)
+
+    assert result == 152
   end
 
-  @tag :skip
   test "part2" do
-    input = nil
-    result = part2(input)
+    result = part2(@input)
 
-    assert result
+    assert result == 301
   end
 end

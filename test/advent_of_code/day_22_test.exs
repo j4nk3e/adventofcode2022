@@ -20,7 +20,6 @@ defmodule AdventOfCode.Day22Test do
 10R5L5R10L4R5L5
 "
 
-  @tag :skip
   test "part1" do
     result = part1(@input)
 

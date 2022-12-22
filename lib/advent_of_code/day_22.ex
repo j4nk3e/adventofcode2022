@@ -23,6 +23,8 @@ defmodule AdventOfCode.Day22 do
   defp move(_map, pos, facing, :right, _), do: {pos, rem(facing + 1, 4)}
 
   defp move(map, {x, y}, facing, d, options) do
+    #  to_string({{x, y}, facing}, map)
+
     {dx, dy} =
       case facing do
         0 -> {1, 0}
@@ -72,70 +74,55 @@ defmodule AdventOfCode.Day22 do
   defp wrap_cube(map, {x, y}, f) do
     k = Map.keys(map)
     {max_x, _} = k |> Enum.max_by(fn {x, _} -> x end)
-    seg = div(max_x, 3) + 1
-
-    s =
-      case div(x, seg) do
-        0 ->
-          case div(y, seg) do
-            2 -> 5
-            3 -> 6
-          end
-
-        1 ->
-          case div(y, seg) do
-            0 -> 1
-            1 -> 3
-            2 -> 4
-          end
-
-        2 ->
-          2
-      end
+    {_, max_y} = k |> Enum.max_by(fn {_, y} -> y end)
+    seg = div(max_x + max_y + 2, 7)
+    s = div(y, seg) * 4 + div(x, seg)
 
     o =
-      case f do
-        0 -> rem(y, seg)
-        1 -> seg - rem(x, seg) - 1
-        2 -> seg - rem(y, seg) - 1
-        3 -> rem(x, seg)
+      if rem(f, 2) == 0 do
+        rem(y, seg)
+      else
+        rem(x, seg)
       end
 
-    {ns, nf} =
-      case {s, f} do
-        {1, 2} -> {5, 0}
-        {1, 3} -> {6, 0}
-        {2, 0} -> {4, 2}
-        {2, 1} -> {3, 2}
-        {2, 3} -> {6, 3}
-        {3, 0} -> {2, 3}
-        {3, 2} -> {5, 1}
-        {4, 0} -> {2, 2}
-        {4, 1} -> {6, 2}
-        {5, 2} -> {1, 0}
-        {5, 3} -> {3, 0}
-        {6, 0} -> {4, 3}
-        {6, 1} -> {2, 1}
-        {6, 2} -> {1, 1}
+    {ns, nf, nx, ny} =
+      if max_x + 1 == 4 * seg do
+        case {s, f} do
+          {2, 0} -> {11, 2, seg - 1, o}
+          {2, 2} -> {5, 1, seg - 1 - o, 0}
+          {2, 3} -> {4, 2, seg - 1, o}
+          {4, 1} -> {10, 3, seg - o - 1, seg - 1}
+          {4, 2} -> {11, 3, seg - o - 1, seg - 1}
+          {4, 3} -> {2, 1, seg - 1 - o, 0}
+          {5, 1} -> {10, 0, 0, o}
+          {5, 3} -> {2, 0, 0, o}
+          {6, 0} -> {11, 1, seg - 1 - o, 0}
+          {10, 1} -> {4, 3, seg - o - 1, seg - 1}
+          {10, 2} -> {5, 3, seg - o - 1, seg - 1}
+          {11, 0} -> {2, 2, seg - 1, o}
+          {11, 1} -> {4, 0, 0, o}
+          {11, 3} -> {6, 2, seg - 1, o}
+        end
+      else
+        case {s, f} do
+          {1, 2} -> {8, 0, 0, seg - o - 1}
+          {1, 3} -> {12, 0, 0, o}
+          {2, 0} -> {9, 2, seg - 1, o}
+          {2, 1} -> {5, 2, seg - 1, seg - o - 1}
+          {2, 3} -> {12, 3, seg - o - 1, seg - 1}
+          {5, 0} -> {2, 3, seg - o - 1, seg - 1}
+          {5, 2} -> {8, 1, o, 0}
+          {9, 0} -> {2, 2, seg - 1, o}
+          {9, 1} -> {12, 2, seg - 1, seg - o - 1}
+          {8, 2} -> {1, 0, 0, seg - o - 1}
+          {8, 3} -> {5, 0, 0, o}
+          {12, 0} -> {9, 3, seg - o - 1, seg - 1}
+          {12, 1} -> {2, 1, o, 0}
+          {12, 2} -> {1, 1, o, 0}
+        end
       end
 
-    {sx, sy} =
-      case ns do
-        1 -> {seg, 0}
-        2 -> {2 * seg, 0}
-        3 -> {seg, seg}
-        4 -> {seg, 2 * seg}
-        5 -> {0, 2 * seg}
-        6 -> {0, 3 * seg}
-      end
-
-    {nx, ny} =
-      case nf do
-        0 -> {0, o}
-        1 -> {seg - 1 - o, 0}
-        2 -> {seg - 1, 0}
-        3 -> {seg - 1 - o, seg - 1}
-      end
+    {sx, sy} = {rem(ns, 4) * seg, div(ns, 4) * seg}
 
     {{sx + nx, sy + ny}, nf}
   end

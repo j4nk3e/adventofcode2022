@@ -9,6 +9,7 @@ defmodule AdventOfCode.Day22 do
       {pos, facing} ->
         move(map, pos, facing, d)
     end
+    |> to_string(map)
     |> score()
   end
 
@@ -22,8 +23,6 @@ defmodule AdventOfCode.Day22 do
   defp move(_map, pos, facing, :right, _), do: {pos, rem(facing + 1, 4)}
 
   defp move(map, {x, y}, facing, d, options) do
-    to_string(map, {x, y}, facing)
-
     {dx, dy} =
       case facing do
         0 -> {1, 0}
@@ -73,90 +72,75 @@ defmodule AdventOfCode.Day22 do
   defp wrap_cube(map, {x, y}, f) do
     k = Map.keys(map)
     {max_x, _} = k |> Enum.max_by(fn {x, _} -> x end)
-    seg = div(max_x, 4) + 1
+    seg = div(max_x, 3) + 1
 
     s =
       case div(x, seg) do
         0 ->
-          2
-
-        1 ->
-          3
-
-        2 ->
           case div(y, seg) do
-            0 -> 1
-            1 -> 4
             2 -> 5
+            3 -> 6
           end
 
-        3 ->
-          6
+        1 ->
+          case div(y, seg) do
+            0 -> 1
+            1 -> 3
+            2 -> 4
+          end
+
+        2 ->
+          2
       end
 
-    #  0123
-    # 3    0
-    # 2    1
-    # 1    2
-    # 0    3
-    #  3210
     o =
       case f do
         0 -> rem(y, seg)
-        1 -> seg - rem(x, seg)
-        2 -> seg - rem(-y, seg)
+        1 -> seg - rem(x, seg) - 1
+        2 -> seg - rem(y, seg) - 1
         3 -> rem(x, seg)
       end
 
-    IO.inspect({{x, y}, s, o, f})
-
     {ns, nf} =
       case {s, f} do
-        {1, 0} -> {6, 2}
-        {1, 2} -> {3, 1}
-        {1, 3} -> {2, 2}
-        {2, 1} -> {5, 3}
-        {2, 2} -> {6, 3}
-        {2, 3} -> {1, 1}
-        {3, 1} -> {5, 0}
-        {3, 3} -> {1, 0}
-        {4, 0} -> {6, 1}
-        {5, 1} -> {2, 3}
-        {5, 2} -> {3, 3}
-        {6, 0} -> {1, 2}
-        {6, 1} -> {2, 0}
-        {6, 3} -> {4, 2}
+        {1, 2} -> {5, 0}
+        {1, 3} -> {6, 0}
+        {2, 0} -> {4, 2}
+        {2, 1} -> {3, 2}
+        {2, 3} -> {6, 3}
+        {3, 0} -> {2, 3}
+        {3, 2} -> {5, 1}
+        {4, 0} -> {2, 2}
+        {4, 1} -> {6, 2}
+        {5, 2} -> {1, 0}
+        {5, 3} -> {3, 0}
+        {6, 0} -> {4, 3}
+        {6, 1} -> {2, 1}
+        {6, 2} -> {1, 1}
       end
 
     {sx, sy} =
       case ns do
-        1 -> {2 * seg, 0}
-        2 -> {0, seg}
+        1 -> {seg, 0}
+        2 -> {2 * seg, 0}
         3 -> {seg, seg}
-        4 -> {2 * seg, seg}
-        5 -> {2 * seg, 2 * seg}
-        6 -> {3 * seg, 2 * seg}
+        4 -> {seg, 2 * seg}
+        5 -> {0, 2 * seg}
+        6 -> {0, 3 * seg}
       end
 
-    #  3210
-    # 0    0
-    # 1    1
-    # 2    2
-    # 3    3
-    #  3210
-    n =
+    {nx, ny} =
       case nf do
-        0 -> {sx, sy + o}
-        1 -> {sx + seg - o - 1, sy}
-        2 -> {sx + seg - 1, sy}
-        3 -> {sx + seg - o - 1, sy + seg - 1}
+        0 -> {0, o}
+        1 -> {seg - 1 - o, 0}
+        2 -> {seg - 1, 0}
+        3 -> {seg - 1 - o, seg - 1}
       end
 
-    to_string(map, n, nf)
-    {n, nf}
+    {{sx + nx, sy + ny}, nf}
   end
 
-  defp to_string(map, pos, f) do
+  defp to_string({pos, f}, map) do
     {max_x, _} = map |> Map.keys() |> Enum.max_by(fn {x, _} -> x end)
     {_, max_y} = map |> Map.keys() |> Enum.max_by(fn {_, y} -> y end)
 
@@ -188,6 +172,7 @@ defmodule AdventOfCode.Day22 do
     |> Enum.map(&IO.puts/1)
 
     IO.puts("\n")
+    {pos, f}
   end
 
   defp parse(args) do
@@ -226,6 +211,7 @@ defmodule AdventOfCode.Day22 do
       {pos, facing} ->
         move(map, pos, facing, d, [:cube])
     end
+    |> to_string(map)
     |> score()
   end
 end
